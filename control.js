@@ -4,7 +4,7 @@ const registerServiceWorker = async () => {
     if ("serviceWorker" in navigator) {
         try {
         const registration = await navigator.serviceWorker.register("./worker.js", {
-            scope: "/",
+            scope: "/treadmill-tracker/",
         })
         if (registration.installing) {
             console.log("Service worker installing")
