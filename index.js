@@ -1,3 +1,7 @@
+/**
+ * Generate an ISO String
+ * @returns {string} timestamp
+ */
 function timestamp() {
   return new Date().toISOString();
 }
