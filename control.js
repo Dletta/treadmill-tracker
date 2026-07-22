@@ -28,6 +28,73 @@ function printTime () {
 }
 
 /**
+ * Save the currently displayed Statistics to history
+ * @returns {Promise<void>}
+ */
+async function saveCurrentStats () {
+    let dateElement = document.getElementById("date")
+    if (!dateElement) return
+    let runTime = document.getElementById("time")
+    if (!runTime) return
+    let distance = document.getElementById("distance")
+    if (!distance) return
+    let runNumber = document.getElementById("runNumber")
+    if (!runNumber) return
+
+
+    /**
+     * @type {RunData}
+     */
+    let dataObject = {
+        date: new Date(dateElement.innerText),
+        distance: parseFloat(distance.innerText),
+        run_time: runTime.innerText,
+        run_number: runNumber.innerText
+    }
+
+    let stats_raw = localStorage.getItem('statistics')
+
+    /**
+     * @type {{runs: RunData[]}}
+     */
+    let stats = {
+            runs: []
+        }
+
+    if (!stats_raw) {
+        stats = {
+            runs: []
+        }
+    } else {
+        try {
+            stats = JSON.parse(stats_raw)
+        } catch (err) {
+            console.log('Caught error', err)
+        }
+    }
+
+    stats.runs.push(dataObject)
+
+    await rotateData(stats)
+
+    localStorage.setItem('statistics', JSON.stringify(stats))
+}
+
+/**
+ * Check if we have 30 days worth and if so drop anything that is over
+ * @argument {{runs: RunData[]}} runData
+ * @returns {Promise<void>}
+ */
+async function rotateData (runData) {
+    if (runData.runs.length > 30) {
+        runData.runs.shift()
+        return
+    } else {
+        return
+    }
+}
+
+/**
  * Sets the value of the Status field in UI
  * @param {string} status 
  * @returns 
@@ -154,11 +221,51 @@ function setRunNumber (runNumber) {
     runNumberSpan.innerText = `${runNumber}`
 }
 
+async function setPastOverview () {
+    let stats_raw = localStorage.getItem('statistics')
+    /**
+     * @type {{runs: RunData[]}}
+     */
+    let stats = {
+        runs: []
+    }
+
+    let empty = "#1F150C"
+    let success = "#90B800"
+
+    if (!stats_raw) {
+        let monthSvgs = document.querySelectorAll(".month-item-svg")
+        for (let i = 0; i < monthSvgs.length; i++) {
+            monthSvgs[i].setAttribute('fill', empty)
+        }
+    } else {
+        try {
+            stats = JSON.parse(stats_raw)
+        } catch (err) {
+            console.log('Caught parsing error', err)
+        }
+        if (stats.runs.length > 0) {
+            for (let i = 0; i < stats.runs.length; i++) {
+                let svg = document.getElementById(`${i+1}`)
+                if (stats.runs[i].distance > 2.0) {
+                    svg?.setAttribute('fill', success)
+                }
+            }
+        }
+    }
+}
+
 /** TYPE DEFINITIONS */
 
 /**
  * @typedef {{connected: boolean, device:object, connect:function, disconnect:function, getPrimaryService: Function, getPrimaryServices: function}} BluetoothRemoteGATTServer
  */
+
+/**
+ * @typedef {{date: Date, distance: number, run_time: string, run_number: string}} RunData
+ */
+
+/** Treadmill Global Object */
 
 /**
  * @property {string} treadmillStatus
@@ -188,6 +295,7 @@ const treadmill = {
         this.treadmillStatus = 'Disconnected'
         setConnectionStatus('Disconnected')
         console.log(printTime(), 'Disconnected from Device GATT')
+        saveCurrentStats()
     }
 }
 
@@ -284,4 +392,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     connectButton?.addEventListener('click', establishBluetoothConnection)
     disconnectButton?.addEventListener('click', disconnectBluetoothConnection)
+
+    setPastOverview()
 });
